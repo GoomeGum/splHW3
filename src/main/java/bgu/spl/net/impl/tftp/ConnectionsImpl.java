@@ -1,7 +1,8 @@
-import java.util.Iterator;
-import java.util.concurrent.CopyOnWriteArrayList;
-import javafx.util.Pair;
+package bgu.spl.net.impl.tftp;
+import java.util.concurrent.ConcurrentHashMap;
+import bgu.spl.net.srv.ConnectionHandler;
 import bgu.spl.net.srv.Connections;
+
 
 public class ConnectionsImpl<T> implements Connections<T> {
     private ConcurrentHashMap<Integer, ConnectionHandler<T>> concurrentHashMap;
@@ -10,14 +11,12 @@ public class ConnectionsImpl<T> implements Connections<T> {
         concurrentHashMap = new ConcurrentHashMap<>();
     }
     @Override
-    boolean connect(int connectionId, ConnectionHandler<T> handler){
-        if(concurrentHashMap.putIfAbsent(connectionId, handler) == null)
-            return true;
-        return false;
+    public boolean connect(int connectionId, ConnectionHandler<T> handler){
+        return concurrentHashMap.putIfAbsent(connectionId, handler) == null;
     }
 
     @Override
-    boolean send(int connectionId, T msg){
+    public boolean send(int connectionId, T msg){
         if(concurrentHashMap.containsKey(connectionId)){
             concurrentHashMap.get(connectionId).send(msg);
             return true;
@@ -26,11 +25,12 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
     @Override
-    void disconnect(int connectionId){
+    public void disconnect(int connectionId){
         if(concurrentHashMap.containsKey(connectionId)){
             concurrentHashMap.remove(connectionId);
             return;
         }
         throw new IllegalArgumentException("No such connectionId");
     }
+
 }
