@@ -1,2 +1,6 @@
 *.class
 *.DS*
+pom.xml
+*.lst
+*.jar
+*.properties
