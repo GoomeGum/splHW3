@@ -97,14 +97,25 @@ public class MessageHandler {
         return result;
 
     }
-    public void handleLOGRQ(String username) {}
-    public void handleDELRQ(String filename) {}
+    public boolean handleDELRQ(String filename) {
+        synchronized(this){
+            String path = folderName + "\\" + filename;
+            File file = new File(path);
+            if(file.exists()){
+                file.delete();
+                files.remove(filename);
+                return true;
+            }
+            return false;
+        }
+    }
     public void handleBCAST(short deletedOrAdded, String filename) {}
     public void handleDISC() {}
-
-
-
+    
+    
+    
     public void handleACK(short blockNumber) {}
     public void handleError(short errorCode, String errorMsg) {}
     public void handleUnknownOpcode(short opCode) {}
+    public void handleLOGRQ(String username) {}
 }

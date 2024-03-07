@@ -2,7 +2,6 @@ package bgu.spl.net.impl.tftp;
 import java.io.IOException;
 import bgu.spl.net.api.BidiMessagingProtocol;
 import bgu.spl.net.srv.Connections;
-import bgu.spl.net.impl.OpCodesEnum;
 import bgu.spl.net.impl.Pair;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -29,6 +28,10 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     private void sendAck(){
         byte[] ack = {0, 4, 0, 0};
         this.connections.send(connectionId, ack);
+    }
+    private void sendError(){
+        byte[] error = {0, 5, 0, 0};
+        this.connections.send(connectionId, error);
     }
 
     @Override
@@ -84,6 +87,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             else{
                 throw new IllegalArgumentException("received data without command");
             }
+            return;
         }
         else if(opCode == 4){
            //ACK
@@ -96,6 +100,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
         else if(opCode == 6){ 
             //DIRQ
             connections.send(connectionId , this.messageHandler.handleDIRQ());
+            return;
         }
         else if(opCode == 7){
             //LOGRQ
@@ -107,10 +112,13 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
         }
         else if(opCode == 8){
             //DELRQ
-            byte[] fileName = new byte[message.length-2];
-            for(int i=2; i<message.length; i++){
-                fileName[i-2] = message[i];
+            String filename = new String(message, 2, message.length-2);  
+            if(this.messageHandler.handleDELRQ(filename)){
+                this.sendAck();
+                return;
             }
+            this.sendError();
+            return;
         }
         else if(opCode == 9){
             //BCAST
