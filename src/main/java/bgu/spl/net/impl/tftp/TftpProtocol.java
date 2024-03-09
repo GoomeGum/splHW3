@@ -4,7 +4,6 @@ import bgu.spl.net.api.BidiMessagingProtocol;
 import bgu.spl.net.srv.Connections;
 import bgu.spl.net.impl.Pair;
 import java.util.concurrent.LinkedBlockingQueue;
-
 public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     private Connections<byte[]> connections;
     private int connectionId;
@@ -38,7 +37,9 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     public void process(byte[] message) {
         byte[] opCodebyts = {message[0], message[1]};
         short opCode = ByteToShort(opCodebyts);
-        if(opCode == 1){
+        int opCodeInt = Integer.valueOf(opCode);
+    
+        if(opCodeInt == OpCodes.RRQ){
             //RRQ
             byte[] fileName = new byte[message.length-2];
             for(int i=2; i<message.length; i++){
@@ -53,7 +54,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             }
             
         }
-        else if(opCode == 2){
+        else if(opCodeInt == OpCodes.WRQ){
             //WRQ
             byte[] fileName = new byte[message.length-2];
             for(int i=2; i<message.length; i++){
@@ -63,7 +64,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             this.reqs.add(new Pair<Short, Object>(opCode, fileName));
             this.sendAck();
         }
-        else if(opCode == 3){
+        else if(opCodeInt == OpCodes.DATA){
             //DATA
             byte[] packetSize = {message[2], message[3]};
             byte[] blockNumber = {message[4], message[5]};
@@ -89,20 +90,20 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             }
             return;
         }
-        else if(opCode == 4){
+        else if(opCodeInt == OpCodes.ACK){
            //ACK
             System.out.println("rcv - ACK");            
         }
-        else if(opCode == 5){
+        else if(opCode == OpCodes.ERROR){
             //ERROR
             System.out.println("rcv - ERROR");
         }
-        else if(opCode == 6){ 
+        else if(opCodeInt == OpCodes.DIRQ){ 
             //DIRQ
             connections.send(connectionId , this.messageHandler.handleDIRQ());
             return;
         }
-        else if(opCode == 7){
+        else if(opCodeInt == OpCodes.LOGRQ){
             //LOGRQ
             byte[] userName = new byte[message.length-2];
             for(int i=2; i<message.length; i++){
@@ -110,7 +111,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             }
             
         }
-        else if(opCode == 8){
+        else if(opCodeInt == OpCodes.DELRQ){
             //DELRQ
             String filename = new String(message, 2, message.length-2);  
             if(this.messageHandler.handleDELRQ(filename)){
@@ -120,7 +121,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             this.sendError();
             return;
         }
-        else if(opCode == 9){
+        else if(opCodeInt == OpCodes.BCAST){
             //BCAST
             byte[] delOrAdd = {message[2]};
             byte[] fileName = new byte[message.length-3];
@@ -128,7 +129,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
                 fileName[i-3] = message[i];
             }
         }
-        else if(opCode == 10){
+        else if(opCode == OpCodes.DISC){
             //DISC 
             connections.disconnect(connectionId);
         }
