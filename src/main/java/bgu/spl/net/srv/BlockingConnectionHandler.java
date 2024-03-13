@@ -21,21 +21,35 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         this.protocol = protocol;
     }
 
+    public void start(int connectionId, Connections<T> connections){
+        protocol.start(connectionId, connections);
+        connections.connect(connectionId, this);
+    }
+
+
     @Override
     public void run() {
         try (Socket sock = this.sock) { //just for automatic closing
             int read;
-
+            
             in = new BufferedInputStream(sock.getInputStream());
+            while(!protocol.shouldTerminate()&& connected && (read = in.read()) >= 0){
+                encdec.decodeNextByte((byte) read);
+            }
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
-                T nextMessage = encdec.decodeNextByte((byte) read);
-                if (nextMessage != null) {
-                    try{
-                        protocol.process(nextMessage);
-                    }
-                    catch (Exception e){
-                        e.printStackTrace();
-                    }
+                if(read == 0){
+                    break;
+                }
+                encdec.decodeNextByte((byte) read);
+                
+            }
+            T nextMessage = encdec.decodeNextByte((byte) 0);
+            if (nextMessage != null) {
+                try{
+                    protocol.process(nextMessage);
+                }
+                catch (Exception e){
+                    e.printStackTrace();
                 }
             }
 

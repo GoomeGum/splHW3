@@ -3,18 +3,17 @@ package bgu.spl.net.impl.tftp;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 public class MessageHandler {
     private String folderName = "Files";
-    private ConcurrentHashMap<String, Lock> files;
+    private AtomicBoolean isFolderLock;
+    private ConcurrentHashMap<String, AtomicBoolean> files;
+    
     public MessageHandler() {
-        files = new ConcurrentHashMap<String, Lock>();
+        files = new ConcurrentHashMap<String, AtomicBoolean>();
+        isFolderLock = new AtomicBoolean();
     }
     private String getFileName(byte[] fileNameBytes) {
         String fileName = "";
@@ -38,63 +37,86 @@ public class MessageHandler {
                 return null;
             }
             if(!this.files.containsKey(filename)){
-                this.files.put(filename, new ReentrantLock());
+                this.files.put(filename, new AtomicBoolean());
             }
-            Lock lockForFile = this.files.get(filename);
-            lockForFile.lock();
+            
+            AtomicBoolean isLocked = this.files.get(filename);
+            
+            while (!isLocked.compareAndSet(false, true)) {
+                isLocked.wait();
+            }
             FileInputStream file = new FileInputStream(path);
-            lockForFile.unlock();
+            isLocked.set(false);
+            isLocked.notifyAll();
             return file;
             
-        } catch (IOException e) {
+        } catch (Exception e) {
             return null;
         }
     }
 
-    public void handleWRQ(byte[] filenameBytes) {
+    public boolean handleWRQ(byte[] filenameBytes) {
+        boolean addNewFlie = false;
         String filename = getFileName(filenameBytes);
         String path = folderName + "\\" + filename;
         try  
         {
             if(!this.files.containsKey(filename)){
-                this.files.put(filename, new ReentrantLock());
+                this.files.put(filename, new AtomicBoolean());
             }
-            Lock lockForFile = this.files.get(filename);
-            lockForFile.lock();
+            AtomicBoolean isLocked = this.files.get(filename);
+            while(!isLocked.compareAndSet(false, true)){
+                isLocked.wait();
+            }
             if(!this.checkFile(filename)){
+                while(!isFolderLock.compareAndSet(false, true)){
+                    isFolderLock.wait();
+                }
                 File file = new File(path);
                 file.createNewFile();
+                addNewFlie = true;
+                isFolderLock.set(false);
+                isFolderLock.notifyAll();
             }
-            
-
-            lockForFile.unlock();
-        } catch (IOException e) {
+            isLocked.set(false);
+            isLocked.notifyAll();
+        } catch (Exception e) {
         }
+        return addNewFlie;
     }
     public void handleDATA(short blockNumber, byte[] data) {
         
     }
     public byte[] handleDIRQ() {
-        File  folder;
-        File[] listOfFiles;
-        synchronized(this){
+        try{
+
+            File  folder;
+            File[] listOfFiles;
+            while(!isFolderLock.compareAndSet(false, true)){
+                isFolderLock.wait();
+            }
             folder = new File(folderName);
             listOfFiles = folder.listFiles();
+            isFolderLock.set(false);
+            isFolderLock.notifyAll();
+            if(listOfFiles == null){
+                return new byte[0];
+            }
+            Vector<Byte> files = new Vector<Byte>();
+            for(File file : listOfFiles){
+                for(Byte b : (file.getName() + "0").getBytes())
+                    files.add(b);
+            }
+            byte[] result =  new byte[files.size()];
+            for (int i = 0; i < files.size(); i++) {
+                result[i] = files.get(i);
+            }
+            result[result.length-1] = '\0';
+            return result;
         }
-        if(listOfFiles == null){
-            return new byte[0];
+        catch(Exception e){
+            return null;
         }
-        Vector<Byte> files = new Vector<Byte>();
-        for(File file : listOfFiles){
-            for(Byte b : (file.getName() + "0").getBytes())
-                files.add(b);
-        }
-        byte[] result =  new byte[files.size()];
-        for (int i = 0; i < files.size(); i++) {
-            result[i] = files.get(i);
-        }
-        result[result.length-1] = '\0';
-        return result;
 
     }
     public boolean handleDELRQ(String filename) {

@@ -8,6 +8,10 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
 
     @Override
     public byte[] decodeNextByte(byte nextByte) {
+        if(len == 0 && nextByte == 0){
+            pushByte(nextByte);
+            return null;
+        }
         if(nextByte == 0) {
             return popString();
         }

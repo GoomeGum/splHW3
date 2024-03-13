@@ -4,11 +4,13 @@ import bgu.spl.net.api.BidiMessagingProtocol;
 import bgu.spl.net.srv.Connections;
 import bgu.spl.net.impl.Pair;
 import java.util.concurrent.LinkedBlockingQueue;
+
 public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     private Connections<byte[]> connections;
     private int connectionId;
     private MessageHandler messageHandler; 
     private LinkedBlockingQueue<Pair<Short, Object>> reqs;
+    private boolean shouldTerminate = false;
     public TftpProtocol(){
         this.messageHandler = new MessageHandler();
         this.reqs = new LinkedBlockingQueue<Pair<Short, Object>>();
@@ -60,9 +62,21 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             for(int i=2; i<message.length; i++){
                 fileName[i-2] = message[i];
             }
-            this.messageHandler.handleWRQ(fileName);
+            boolean addedFile = this.messageHandler.handleWRQ(fileName);
             this.reqs.add(new Pair<Short, Object>(opCode, fileName));
             this.sendAck();
+            if(addedFile){
+                byte[] msg = new byte[fileName.length+5];
+                byte[] initM = "add".getBytes();
+                for(int i =0; i<initM.length; i++){
+                    msg[i] = initM[i];
+                }
+                msg[initM.length] = " ".getBytes()[0]; // add space 
+                for(int i =0; i<fileName.length; i++){
+                    msg[i+initM.length+1] = fileName[i];
+                }
+                this.connections.sendBrodcast(msg);
+            }
         }
         else if(opCodeInt == OpCodes.DATA){
             //DATA
@@ -123,15 +137,27 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
         }
         else if(opCodeInt == OpCodes.BCAST){
             //BCAST
-            byte[] delOrAdd = {message[2]};
+            byte[] initM = message[2] == 0? "del".getBytes() : "add".getBytes();
             byte[] fileName = new byte[message.length-3];
             for(int i=3; i<message.length; i++){
                 fileName[i-3] = message[i];
+            }
+            byte[] msg = new byte[initM.length + fileName.length + 1];
+            for(int i=0; i<initM.length; i++){
+                msg[i] = initM[i];
+            }
+            for(int i=0; i<fileName.length; i++){
+                msg[i+initM.length] = fileName[i];
+            }
+            msg[msg.length -1] = 0; // make sure its not overiding the last byte
+            if(!connections.sendBrodcast(msg)){
+                System.out.println("failed to send brodcast");
             }
         }
         else if(opCode == OpCodes.DISC){
             //DISC 
             connections.disconnect(connectionId);
+            this.shouldTerminate = true;
         }
 
 
@@ -147,8 +173,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     }
     @Override
     public boolean shouldTerminate() {
-        // TODO implement this
-        throw new UnsupportedOperationException("Unimplemented method 'shouldTerminate'");
+        return this.shouldTerminate;
     } 
 
 

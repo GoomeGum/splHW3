@@ -32,5 +32,16 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
         throw new IllegalArgumentException("No such connectionId");
     }
+    @Override
+    public boolean sendBrodcast(T msg) {
+        boolean ans = true;
+        for (Integer connectionId : concurrentHashMap.keySet()) {
 
+            if(!send(connectionId, msg)){
+                ans = false;
+            }
+        }
+        return ans;
+    }
+    
 }
