@@ -13,6 +13,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private final MessageEncoderDecoder<T> encdec;
     private final Socket sock;
     private BufferedInputStream in;
+    private BufferedOutputStream out;
     private volatile boolean connected = true;
 
     public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, BidiMessagingProtocol<T> protocol) {
@@ -31,31 +32,33 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     public void run() {
         try (Socket sock = this.sock) { //just for automatic closing
             int read;
-            
-            in = new BufferedInputStream(sock.getInputStream());
-            while(!protocol.shouldTerminate()&& connected && (read = in.read()) >= 0){
-                encdec.decodeNextByte((byte) read);
-            }
-            while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
-                if(read == 0){
-                    break;
+            out = new BufferedOutputStream(sock.getOutputStream());
+            in = new BufferedInputStream(sock.getInputStream());   
+            while(true){
+                    while(!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
+                        encdec.decodeNextByte((byte) read);
+                        if(!(in.available() > 0)){
+                            break;
+                        }
+                    }
+                    
+                    // while(!protocol.shouldTerminate()&& connected && (read = in.read()) >= 0){// read the op code
+                    //     encdec.decodeNextByte((byte) read);
+                    // }
+                    T nextMessage = encdec.decodeNextByte((byte) 0);
+                    if (nextMessage != null) {
+                        try{
+                            protocol.process(nextMessage);
+                        }
+                        catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+        
                 }
-                encdec.decodeNextByte((byte) read);
-                
+            } catch (IOException ex) {
+                ex.printStackTrace();
             }
-            T nextMessage = encdec.decodeNextByte((byte) 0);
-            if (nextMessage != null) {
-                try{
-                    protocol.process(nextMessage);
-                }
-                catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
 
     }
 
@@ -67,6 +70,11 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-        //IMPLEMENT IF NEEDED
+        try{
+            out.write(encdec.encode(msg));
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

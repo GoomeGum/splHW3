@@ -3,6 +3,7 @@ package bgu.spl.net.impl.tftp;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -98,7 +99,9 @@ public class MessageHandler {
             folder = new File(folderName);
             listOfFiles = folder.listFiles();
             isFolderLock.set(false);
-            isFolderLock.notifyAll();
+            synchronized (isFolderLock) {
+                isFolderLock.notifyAll();
+            }
             if(listOfFiles == null){
                 return new byte[0];
             }
@@ -111,7 +114,6 @@ public class MessageHandler {
             for (int i = 0; i < files.size(); i++) {
                 result[i] = files.get(i);
             }
-            result[result.length-1] = '\0';
             return result;
         }
         catch(Exception e){
