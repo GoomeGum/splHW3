@@ -14,7 +14,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private final Socket sock;
     private BufferedInputStream in;
     private BufferedOutputStream out;
-    private volatile boolean connected = true;
+    private volatile boolean connected;
 
     public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, BidiMessagingProtocol<T> protocol) {
         this.sock = sock;
@@ -24,7 +24,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     public void start(int connectionId, Connections<T> connections){
         protocol.start(connectionId, connections);
-        connections.connect(connectionId, this);
+        connected = connections.connect(connectionId, this); // we need to connect only when a user is sending the login command
     }
 
 
