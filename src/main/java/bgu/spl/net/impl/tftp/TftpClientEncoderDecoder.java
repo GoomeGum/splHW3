@@ -1,7 +1,5 @@
 package bgu.spl.net.impl.tftp;
 
-import bgu.spl.net.api.MessageEncoderDecoder;
-
 public class TftpClientEncoderDecoder {
     private byte[] bytes = new byte[1 << 10];
     private int len = 0;

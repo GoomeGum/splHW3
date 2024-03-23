@@ -28,6 +28,12 @@ public class ConnectionsImpl<T> implements Connections<T> {
     public void disconnect(int connectionId){
         if(concurrentHashMap.containsKey(connectionId)){
             concurrentHashMap.remove(connectionId);
+            try{
+                concurrentHashMap.get(connectionId).close();
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
             return;
         }
         throw new IllegalArgumentException("No such connectionId");

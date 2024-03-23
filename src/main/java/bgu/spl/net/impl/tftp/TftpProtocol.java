@@ -1,5 +1,4 @@
 package bgu.spl.net.impl.tftp;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import bgu.spl.net.api.BidiMessagingProtocol;

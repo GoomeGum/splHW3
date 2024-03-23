@@ -3,7 +3,6 @@ package bgu.spl.net.impl.tftp;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -141,8 +140,6 @@ public class MessageHandler {
         }
     }
     public void handleBCAST(short deletedOrAdded, String filename) {}
-    public void handleDISC() {}
-    
     
     
     public void handleACK(short blockNumber) {}
