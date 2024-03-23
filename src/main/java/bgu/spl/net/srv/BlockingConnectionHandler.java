@@ -14,17 +14,23 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private final Socket sock;
     private BufferedInputStream in;
     private BufferedOutputStream out;
-    private volatile boolean connected;
+    private Connections<T> connections;
+    private int connectionId;
 
     public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, BidiMessagingProtocol<T> protocol) {
         this.sock = sock;
         this.encdec = reader;
         this.protocol = protocol;
+        this.connections = null;
+        this.connectionId = -1;
     }
 
     public void start(int connectionId, Connections<T> connections){
+        this.connections = connections;
+        this.connectionId = connectionId;
         protocol.start(connectionId, connections);
-        connected = connections.connect(connectionId, this); // we need to connect only when a user is sending the login command
+        connections.connect(connectionId, this);
+        
     }
 
 
@@ -36,35 +42,39 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
             in = new BufferedInputStream(sock.getInputStream());   
             T nextMessage  = null;
             while(true){
-                    while(!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
-                        nextMessage = encdec.decodeNextByte((byte) read);
-                        if(!(in.available() > 0)){
-                            break;
-                        }
-                    }
-                    if(nextMessage == null){
-                        nextMessage = encdec.decodeNextByte((byte) 0);
-                    }
-                    if (nextMessage != null) {
-                        try{
-                            protocol.process(nextMessage);
-                        }
-                        catch (Exception e){
-                            e.printStackTrace();
-                        }
+                while(!protocol.shouldTerminate() && (read = in.read()) >= 0) {    
+                    nextMessage = encdec.decodeNextByte((byte) read);
+                    if(!(in.available() > 0)){
+                        break;
                     }
                 }
+                
+                if(nextMessage == null){
+                    nextMessage = encdec.decodeNextByte((byte) 0);
+                }
+                if (nextMessage != null) {
+                    try{
+                        protocol.process(nextMessage);
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+                }
             } catch (IOException ex) {
-                ex.printStackTrace();
+                if(connections != null){
+                    connections.disconnect(connectionId);
+                    return;
+                }
             }
 
     }
 
     @Override
     public void close() throws IOException {
-        connected = false;
         sock.close();
     }
+    
 
     @Override
     public void send(T msg) {

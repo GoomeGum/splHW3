@@ -16,5 +16,8 @@ public class Pair<T1, T2>{
     public T2 getSecond(){
         return second;
     }
+    public void setSecond(T2 second){
+        this.second = second;
+    }
 
 }

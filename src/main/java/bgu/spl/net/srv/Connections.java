@@ -8,5 +8,8 @@ public interface Connections<T> {
 
     boolean sendBrodcast(T msg);
 
+    boolean isConnected(int connectionId);
+
     void disconnect(int connectionId);
+    void logIn(int connectionId);
 }

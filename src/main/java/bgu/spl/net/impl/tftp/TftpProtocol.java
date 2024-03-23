@@ -31,16 +31,24 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
         byte[] ack = {0, 4, 0, 0};
         this.connections.send(connectionId, ack);
     }
-    private void sendError(){
-        byte[] error = {0, 5, 0, 0};
+    private void sendError(int errorCode){
+        byte[] error = {0, (byte)errorCode, 0, 0};
         this.connections.send(connectionId, error);
     }
+    public void sendUserNotLogError(){
+        this.sendError(6);
+    }
+
 
     @Override
     public void process(byte[] message) {
         byte[] opCodebyts = {message[0], message[1]};
         short opCode = ByteToShort(opCodebyts);
         int opCodeInt = Integer.valueOf(opCode);
+        if((!this.connections.isConnected(connectionId)) && opCodeInt != OpCodes.LOGRQ){
+            this.sendUserNotLogError();
+            return;
+        }
     
         if(opCodeInt == OpCodes.RRQ){
             //RRQ
@@ -52,7 +60,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             try {
                 FileInputStream fileInputStream = this.messageHandler.handleRRQ(fileName);
                 if(fileInputStream == null){
-                    this.sendError();
+                    this.sendError(1);
                     return;
                 }
                 file = fileInputStream.readAllBytes();
@@ -129,6 +137,10 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             for(int i=2; i<message.length; i++){
                 userName[i-2] = message[i];
             }
+            this.connections.logIn(connectionId);
+            this.sendAck(); 
+            
+
             
         }
         else if(opCodeInt == OpCodes.DELRQ){
@@ -138,7 +150,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
                 this.sendAck();
                 return;
             }
-            this.sendError();
+            this.sendError(1);
             return;
         }
         else if(opCodeInt == OpCodes.BCAST){
