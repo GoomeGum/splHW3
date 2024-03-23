@@ -20,11 +20,31 @@ public class TftpClient {
         System.out.println("connected to server");
         while(true){
             try {
-                byte[] msg = new byte[2];
-                msg[0] = 0;
-                msg[1] = 6;
+                String msg =  System.console().readLine();
+                String[] splited = msg.split(" ");
+                byte[] msgBytes = null;
+                String command = splited[0];
+                String data = null;
+                if(splited.length > 1){
+                    data = splited[1];
+                }
+                byte[] opcode = encdec.encodeOpCode(command);
+                if(data != null){
+                    byte[] dataBytes = encdec.encode(data);
+                    msgBytes = new byte[opcode.length + dataBytes.length];
+                    for (int i = 0; i < opcode.length; i++) {
+                        msgBytes[i] = opcode[i];
+                    }
+                    for (int i = 0; i < dataBytes.length; i++) {
+                        msgBytes[i + opcode.length] = dataBytes[i];
+                    }
+                    
+                }
+                else{
+                    msgBytes = opcode;
+                }
                 System.out.println("sending message to server");
-                out.write(msg);
+                out.write(msgBytes);
                 out.flush();
     
                 System.out.println("awaiting response");
@@ -40,17 +60,15 @@ public class TftpClient {
                             break;
                         }
                     }
-                if(result != null){
-                    for (int i = 0; i < result.length; i++) {
-                        char c = result[i] != 48? (char)result[i]: ' ' ;
-                        line += c;
+                    if(result != null){
+                        for (int i = 0; i < result.length; i++) {
+                            char c = result[i] != 48? (char)result[i]: ' ' ;
+                            line += c;
+                        }
+                        break;
+                    }
                 }
-            }
-                    
-                
-                
                 System.out.println("message from server: " + line);
-            }
         }
         catch (Exception e){
             e.printStackTrace();

@@ -48,7 +48,9 @@ public class MessageHandler {
             }
             FileInputStream file = new FileInputStream(path);
             isLocked.set(false);
-            isLocked.notifyAll();
+            synchronized (isLocked) {
+                isLocked.notifyAll();
+            }
             return file;
             
         } catch (Exception e) {
@@ -77,10 +79,15 @@ public class MessageHandler {
                 file.createNewFile();
                 addNewFlie = true;
                 isFolderLock.set(false);
-                isFolderLock.notifyAll();
+                synchronized (isFolderLock) {
+                    isFolderLock.notifyAll();
+                }
+                
             }
             isLocked.set(false);
-            isLocked.notifyAll();
+            synchronized (isLocked) {
+                isLocked.notifyAll();
+            }
         } catch (Exception e) {
         }
         return addNewFlie;

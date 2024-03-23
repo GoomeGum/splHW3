@@ -1,4 +1,6 @@
 package bgu.spl.net.impl.tftp;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import bgu.spl.net.api.BidiMessagingProtocol;
 import bgu.spl.net.srv.Connections;
@@ -49,7 +51,12 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
             }
             byte[] file;
             try {
-                file = this.messageHandler.handleRRQ(fileName).readAllBytes();
+                FileInputStream fileInputStream = this.messageHandler.handleRRQ(fileName);
+                if(fileInputStream == null){
+                    this.sendError();
+                    return;
+                }
+                file = fileInputStream.readAllBytes();
                 this.connections.send(connectionId,file);   
             } catch (IOException e) {
                 e.printStackTrace();
