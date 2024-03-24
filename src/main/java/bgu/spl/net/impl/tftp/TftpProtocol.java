@@ -114,7 +114,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
                 }
             }
             else{
-                throw new IllegalArgumentException("received data without command");
+                this.sendError(0);
             }
             return;
         }

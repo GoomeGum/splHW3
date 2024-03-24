@@ -24,9 +24,15 @@ public class TftpClient {
                 String[] splited = msg.split(" ");
                 byte[] msgBytes = null;
                 String command = splited[0];
-                String data = null;
+                String data;
                 if(splited.length > 1){
-                    data = splited[1];
+                    data = "";
+                    for (int i = 1; i < splited.length; i++) {
+                        data += splited[i] + " ";
+                    }
+                }
+                else{
+                    data = null;
                 }
                 byte[] opcode = encdec.encodeOpCode(command);
                 if(data != null){
@@ -38,7 +44,7 @@ public class TftpClient {
                     for (int i = 0; i < dataBytes.length; i++) {
                         msgBytes[i + opcode.length] = dataBytes[i];
                     }
-                    
+
                 }
                 else{
                     msgBytes = opcode;
